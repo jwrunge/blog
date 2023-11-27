@@ -2,6 +2,7 @@
 
 * intro
 * framework fatigue and introducing Copper
+* options for writing cross-platform apps
 * Capacitor NFC
 * Capacitor Bluetooth
 * The problem with HTMX and introducing alternative
