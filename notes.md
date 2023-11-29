@@ -19,4 +19,6 @@
 * version with htmx
 * version with Copper
 
+* video tutorials are terrible
+
 * That amazing Copilot autocomplete
