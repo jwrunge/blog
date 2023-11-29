@@ -11,3 +11,9 @@
 * WebAssembly challenges, memory; multi-language WASI
 * FFI vs WASI vs stdout - what's the best solution?
 * Introducing STCkY stack
+
+* Just a simple hybrid-native app with Svelte and capacitor
+* version with htmx
+* version with Copper
+
+* That amazing Copilot autocomplete
