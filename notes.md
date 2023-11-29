@@ -22,3 +22,5 @@
 * video tutorials are terrible
 
 * That amazing Copilot autocomplete
+
+* our tools are bad -- why we need preprocessors, transpilers, type checkers, etc.
