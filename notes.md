@@ -25,3 +25,4 @@
 
 * our tools are bad -- why we need preprocessors, transpilers, type checkers, etc.
 * How to write a good, generic modal in Svelte
+* Build a dependency refactor resolver
