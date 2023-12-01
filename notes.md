@@ -1,5 +1,7 @@
 # Blog ideas
 
+dev.to header image ratio: 1000:420
+
 * intro
 * framework fatigue and introducing Copper
 * all the ways to include external sources; all the ways to make a module
