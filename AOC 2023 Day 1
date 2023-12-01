@@ -1,0 +1,319 @@
+# Calibrating an Elven Trebuchet in Rust: Advent of Code 2023 Day 1
+
+Strap in, folks: I stayed up until 2 AM trying to get a solution to the first challenge of this year's [Advent of Code](https://adventofcode.com/). Why? Because I decided I was going to do it in Rust, that's why.
+
+I'll just take you through my approach to the problem. I won't cover the code in great detail (you can [check out the repo](https://github.com/jwrunge/advent_of_code_2023) if you want to take a closer look), but I *will* touch on some points of pain and interest. If you, too, are learning Rust or thinking about, this article may help to call attention to what makes Rust, Rust. If you're a seasoned Rustacean, well, consider this a comedy article. (But please do let me know if there are better ways to approach any of this!)
+
+## The first prompt
+
+This first AOC challenge came in two parts. The first had something to do with elves launching me into space on a trebuchet to get power stars or something, I didn't *quite* follow, but the actual task was pretty simple: given a list of strings like this:
+
+```text
+mxmkjvgsdzfhseightonetwoeight7
+3five4s84four9rtbzllggz
+75sevenzdrpkv1onetwo
+3q7ctkghhqkpb5four
+```
+
+For each line, get the first and last number and concatenate them. Then, for each number you've found, add them all up, and that's the solution to the problem.
+
+For example, the first line above would yield 77 (as 7 is both the first and last number); the second would yield 39; the third, 71; and so on. My list contained 1000 lines like this.
+
+So right now I'm thinking, "No sweat! This is, like, 4 lines of JavaScript." I knew Rust would be a bit more complicated, but I've toyed around in Rust enough to know how to write the code and where to look for what I don't know.
+
+## Getting started
+
+I Cargo init'd, saved the 1000-line input to a file in my Rust project, and wrote up a little file loading function that printed the file contents to the console, just to make sure I could load the data correctly. No problem.
+
+```rust
+use std::fs;
+
+fn load_input_from_file(filename: &str) -> () {
+    let contents = fs::read_to_string(filename).expect("Something went wrong reading the file");
+    println!("File contents: {}", contents);
+    ()
+}
+```
+
+Quick note here to say that I'm not worrying too much about failing gracefully. I used `expect()` above to provide a decent error message on panic if the file load failed, but you'll see some `unwrap()`s later on (which is considered bad practice in production code).
+
+Next, I tried to get fancy and import the `reqwest` Cargo crate to load straight from the URL instead of loading from a file, and got my first ego check: AOC data is unique per-user and instead of getting the list of 1000 strings, I got a prompt to authenticate. I'm not dealing with that right now, and this isn't really a Rust problem, so we'll stick with loading from a file and just move on.
+
+30.png
+
+## Making the borrow checker mad
+
+Turns out, loading a string from a file is really not all that complicated, so it doesn't make much sense to have a whole function dedicated to it. In an effort to make functions as single-purpose and reusable as possible (I don't know what AOC has in store!), I wrote up this little beauty, which takes a filename and returns its contents as a `Split<'_, &str>`:
+
+```rust
+fn load_coords_from_file(filename: &str) -> Split<'_, &str> {
+    let contents = fs::read_to_string(filename).expect("Something wen wrong reading the file");
+    let lines = contents.split("\n");
+    lines
+}
+```
+
+Bad move, Jake.
+
+#804
+
+There are two issues the compiler let me know about here. The first is that I should use `.collect()` to return a vector of string references. That feels a lot better... but I'm not going to do it, because the second issue would likely still remain: "cannot return a value referencing a local variable 'contents.'
+
+I've run afoul of the borrow checker. The borrow checker is the pain and beauty of Rust, and it exists to ensure that you aren't leaking memory by leaving references around after their block goes out of scope. And that's what's happening here -- the `&str` is a string reference type, or string slice.
+
+I've gotten into some gnarly borrow checker fights, but this isn't really one of them.If we return a `&str` or anything that contains one, we'll be returning a reference to memory that goes out of scope and gets cleaned up the moment that function completes. We could return a vector of strings, but this may be a good early warning that I'm stretching context across too many functions and I just need to let my function be a little bigger and do a little more.
+
+## Making some progress
+
+With that in mind, I wrote up a `get_calibration()` function and a `first_number()` and `last_number` function:
+
+```rust
+fn first_number(input: &str) -> Option<char> {
+    for c in input.chars() {
+        if c.is_digit(10) {
+            return Some(c);
+        }
+    }
+
+    None
+}
+
+fn last_number(input: &str) -> Option<char> {
+    for c in input.chars().rev() {
+        if c.is_digit(10) {
+            return Some(c);
+        }
+    }
+
+    None
+}
+
+fn get_calibration(filename: &str) -> i32 {
+    let contents = fs::read_to_string(filename).expect("Something went wrong reading the file");
+    let lines = contents.split("\n");
+
+    let mut nums: Vec<i32> = Vec::new();
+    for line in lines {
+        let first_num = first_number(line);
+        let last_num = last_number(line);
+        let combo_str = String::from(first_num + last_num);
+        nums.push(combo_str.parse::<i32>().expect("Combo string should parse to i32"));
+    }
+
+    let mut sum = 0;
+    for num in nums {
+        sum += num;
+    }
+}
+```
+
+Since those `first_`- and `last_number()` functions could potentially fail, I return an `Option<char>`. This is roughly the equivalent of returning `string | null` in TypeScript, and then accounting for `null` on the returned variable. This is something that Rust does that takes some getting used to, but that I really like: just about everything is wrapped up in little packages, and typically unwrapped with a `match` function, or failure-handled with something like `expect()` or just straight panic-on-failure'd with `unwrap()`. It's verbose, but there is pretty much zero chance your code will crash because it threw an error or provided a value you didn't expect (*ahem* JavaScript *ahem*). Even pointers are wrappers around a type that work in much this same fashion, with one of the most common literally being called `Box`.
+
+By the way, I could totally combine those `first_number` and `last_number` functions and add a `reverse` flag as a parameter, but we'll just leave it and move on.
+
+## Testing
+
+OK, so this is my absolute favorite part of Rust (well, aside from the amazingly-detailed compiler errors and wicked-smaht LSP) -- built-in, easy-to-use testing macros.
+
+To make sure my `first_`- and `last_number()` functions were behaving as intended, I set up a couple of tests:
+
+```rust
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn test_first_num() {
+        assert_eq!(first_number(&"ab12cd34ef").unwrap(), '1');
+    }
+
+    #[test]
+    fn test_last_num() {
+        assert_eq!(last_number(&"ab12cd34ef").unwrap(), '4');
+    }
+}
+```
+
+Yep, looking good! With that validation, I ran my code, copied the output, and got my first gold star.
+
+#4000
+
+## The second prompt (or, Origins of Pain and Suffering)
+
+The elves are awful, awful little monsters, and apparently they have spelled out a few numbers: "two" instead of 2, "nine" instead of 9, etc. Luckily, even though they have spelled out some words like "sixteen," we only have to account for "one" through "nine."
+
+The first part was really not a problem, and I figured this wouldn't be either. Maybe *10* lines of JavaScript now, but still achievable in Rust. What a fool I was.
+
+## My approach
+
+Rather than getting into tedious char-by-char investigations of each string, I figured, "Let's just make a HashMap linking the spelled-out number to a stringified numeric representation and do a replace."
+
+```rust
+fn check_for_word(input: &str) -> String {
+    let words: HashMap<String, &str> = HashMap::from([
+        ("one".to_string(), "1"),
+        ("two".to_string(), "2"),
+        ("three".to_string(), "3"),
+        ("four".to_string(), "4"),
+        ("five".to_string(), "5"),
+        ("six".to_string(), "6"),
+        ("seven".to_string(), "7"),
+        ("eight".to_string(), "8"),
+        ("nine".to_string(), "9"),
+    ]);
+
+    let mut replaced = input.to_string();
+    for word in words.keys() {
+        if input.contains(word) {
+            replaced = replaced.replace(word, words.get(word).unwrap());
+        }
+    }
+
+    replaced
+}
+```
+
+Boom. Run that at the start of `first_`- and `last_number()` functions. Boom. Write a new test:
+
+```rust
+#[test]
+fn test_check_for_word() {
+    assert_eq!(check_for_word(&"one2ctwo34ef"), "12c234ef");
+}
+```
+
+Passed. Boom. Submit.
+
+#5359
+
+Failure.
+
+*WHAT???* How??? It passed my test and everything!
+
+## Tricksy hobbitses... I mean *elves*
+
+Here's where Rust's awesome testing functionality came to my aid again. I expanded my `test_check_for_word()` test with a randomly-selected string from the hot garbage these evil little elves provided me:
+
+```rust
+assert_eq!(check_for_word(&"jjhxddmg5mqxqbgfivextlcpnvtwothreetwonerzk"), "jjhxddmg5mqxqbg5fivextlcpnv2two3three2tw1onerzk");
+```
+
+and on closer investigation of that string, lo and behold, they were *intentionally trying to trick me!* The nerve.
+
+```text
+jjhxddmg5mqxqbgfivextlcpnvtwothreetwonerzk
+```
+
+Look at that. Look what they did: "twone". That's a "two" and a "one" combined. Both need accounted for, but my "replace word with number" method means the "two" gets replaced and the "one" is never seen. It turns into "2ne." Aaah!
+
+## Rust strings are hard
+
+That means I need to be a little less laissez-faire about replacing words.
+
+BUT, if I can go char-by-char through each string, look ahead by some number of chars to see if a whole word is there (say, 5 chars, the length of the longest number-word to replace), all I would have to do is insert the numeric value *before* the corresponding word, and I could preserve the correct order of numbers in the string without mangling number-words that I still need to check for.
+
+A sound plan, but at this point it was 1 AM, when the ability to implement such a plan begins to wane. I came up with this monstrosity:
+
+```rust
+fn check_for_word(input: &str) -> String {
+    // --- snip --- 
+    let mut replaced = "".to_string();
+    let mut i = 0;
+    let mut skip = 0;
+    for char in input.chars() {
+        if skip > 0 {
+            skip -= 1;
+            continue;
+        }
+
+        if i+5 <= input.len() {
+            let substr = match input.get(i..i+5).ok_or("Out of bounds") {
+                Ok(str)=> str,
+                _ => {continue;}
+            };
+
+            let mut replaced_word = false;
+            for word in words.keys() {
+                if substr.contains(word) {
+                    let replacement = format!("{}{}", words.get(word).unwrap(), word);
+                    let new_substr = substr.replace(word, replacement.as_str());
+                    replaced.push_str(new_substr.as_str());
+                    i += 5;
+                    skip = 4;
+                    replaced_word = true;
+                    continue;
+                }
+            }
+
+            if replaced_word {
+                continue;
+            }
+        }
+
+        replaced.push_str(char.to_string().as_str());
+        i += 1;
+    }
+
+    replaced
+}
+```
+
+🤮
+
+This took forever to come up with, partly because Rust strings are a bit of a challenge compared to in JavaScript (where anything can be a string and a string can be anything).
+
+I'll explain... but if you don't want an explanation of bad code, you can skip this section.
+
+Iterating over a Rust string seems to require iterating over its `char`s, rather than its indices. And according to the compiler and several Google searches, there is no way to iterate over its indices. All Rust strings are valid UTF-8, and each index would refer to a byte... but each char may be more than one byte in UTF-8. So, this is probably a case of front-end brain, but for my purposes, I just want an index of how many chars in we are, not a byte index, so why can't I just write `for (char, i) in input.chars()`? Anyway, we must accept the things we cannot change. There are bigger problems here. Problems I've made for myself.
+
+My test passed. I was ready to go to sleep. But my output was *still wrong* according to the AOC webpage.
+
+See that nasty code that attempts to replace a word in a 5-char chunk, and then hackily skips the next 5 chars of the loop as a workaround to not being able to (figure out how to) skip several chars ahead in the iterator? Yeah, that's almost certainly the problem.
+
+## An insurmountable 2 AM problem, a 5-minute 7 AM fix
+
+I gave up. I committed my code, `git commit -m "Failure!"`. I went to bed. I lay awake, restless.
+
+Then it came to me. Why try to replace the whole 5-char chunk? Why not just insert the number, and keep aggregating chars onto the string? Just let the loop run!
+
+It took everything I had not to rush back to my computer. Good thing I didn't, because my daughter woke up crying. Then one of my dogs urinated in the hallway and I stepped in it while I was bringing her to my son's bed (where I was sleeping -- my son took my spot in my bed again). Look, I'm just saying... I'm a little sleepy. I'm hoping tomorrow's AOC adventure is a little tamer. That or maybe I can *not* stay up for it this time?
+
+This morning, I did a little refactoring, updated my loop, and got another bad output. This has gone on long enough, so I won't go into to much more detail here.
+
+I added several more test cases (I *so* love the integrated testing!) comparing some AOC-provided inputs and outputs, and discovered the five-chars-at-a-time approach overflowing the string's bounds, which I was handling... but it meant that spelled-out numbers at the end of a string were getting ingored. So strings like "two1nine" were returning 21 instead of 29.
+
+Here's the simplified loop I ended up with:
+
+```rust
+let mut replaced = "".to_string();
+let mut i = 0;
+for char in input.chars() {
+    for word in words.keys() {
+        let substr = match input.get(i..i+word.len()).ok_or("Out of bounds") {
+            Ok(str)=> str,
+            _ => {continue;}
+        };
+
+        if substr == word {
+            replaced.push_str(words.get(word).unwrap());
+        }
+    }
+
+    replaced.push_str(char.to_string().as_str());
+    i += 1;
+}
+```
+
+Run, copy, submit, and...
+
+#2052
+
+SUCCESS!
+
+Simple is better, folks.
+
+I have conquered Day 1! I have obsessed and agonized and lost sleep over code for which I am not getting paid, which is in no way furthering my myriad personal projects! I'm a... winner?
+
+Anyway, I learned a lot. I hope you got something out of this, too! I'll keep plugging away at these challenges, so if you want more (hopefully shorter?) accounts of my AOC adventures in Rust, be sure to follow this blog, or [follow me on Twitter / X](), where I'll do some occasional posts or blog updates.
+
+See ya!
