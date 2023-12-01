@@ -39,7 +39,8 @@ Quick note here to say that I'm not worrying too much about failing gracefully. 
 
 Next, I tried to get fancy and import the `reqwest` Cargo crate to load straight from the URL instead of loading from a file, and got my first ego check: AOC data is unique per-user and instead of getting the list of 1000 strings, I got a prompt to authenticate. I'm not dealing with that right now, and this isn't really a Rust problem, so we'll stick with loading from a file and just move on.
 
-30.png
+
+![Puzzle inputs differ by user error](https://dev-to-uploads.s3.amazonaws.com/uploads/articles/uppacis79c1ai2001dum.png)
 
 ## Making the borrow checker mad
 
@@ -55,7 +56,7 @@ fn load_coords_from_file(filename: &str) -> Split<'_, &str> {
 
 Bad move, Jake.
 
-#804
+![Return local variable compiler error](https://dev-to-uploads.s3.amazonaws.com/uploads/articles/y2yswsgaqxtbopb8h2of.png)
 
 There are two issues the compiler let me know about here. The first is that I should use `.collect()` to return a vector of string references. That feels a lot better... but I'm not going to do it, because the second issue would likely still remain: "cannot return a value referencing a local variable 'contents.'
 
@@ -136,7 +137,8 @@ mod tests {
 
 Yep, looking good! With that validation, I ran my code, copied the output, and got my first gold star.
 
-#4000
+
+![My first gold star!](https://dev-to-uploads.s3.amazonaws.com/uploads/articles/4kiedldazlnx8xeuona7.png)
 
 ## The second prompt (or, Origins of Pain and Suffering)
 
@@ -184,7 +186,7 @@ fn test_check_for_word() {
 
 Passed. Boom. Submit.
 
-#5359
+![Submission failure](https://dev-to-uploads.s3.amazonaws.com/uploads/articles/vxqz02348njuhlcqnbm8.png)
 
 Failure.
 
@@ -262,7 +264,7 @@ fn check_for_word(input: &str) -> String {
 
 This took forever to come up with, partly because Rust strings are a bit of a challenge compared to in JavaScript (where anything can be a string and a string can be anything).
 
-I'll explain... but if you don't want an explanation of bad code, you can skip this section.
+I'll explain... but if you don't want an explanation of bad code, you can skip this next paragraph.
 
 Iterating over a Rust string seems to require iterating over its `char`s, rather than its indices. And according to the compiler and several Google searches, there is no way to iterate over its indices. All Rust strings are valid UTF-8, and each index would refer to a byte... but each char may be more than one byte in UTF-8. So, this is probably a case of front-end brain, but for my purposes, I just want an index of how many chars in we are, not a byte index, so why can't I just write `for (char, i) in input.chars()`? Anyway, we must accept the things we cannot change. There are bigger problems here. Problems I've made for myself.
 
@@ -306,7 +308,8 @@ for char in input.chars() {
 
 Run, copy, submit, and...
 
-#2052
+
+![Success!](https://dev-to-uploads.s3.amazonaws.com/uploads/articles/phcmgtjt24j21xywho7m.png)
 
 SUCCESS!
 
@@ -314,6 +317,6 @@ Simple is better, folks.
 
 I have conquered Day 1! I have obsessed and agonized and lost sleep over code for which I am not getting paid, which is in no way furthering my myriad personal projects! I'm a... winner?
 
-Anyway, I learned a lot. I hope you got something out of this, too! I'll keep plugging away at these challenges, so if you want more (hopefully shorter?) accounts of my AOC adventures in Rust, be sure to follow this blog, or [follow me on Twitter / X](), where I'll do some occasional posts or blog updates.
+Anyway, I learned a lot. I hope you got something out of this, too! I'll keep plugging away at these challenges, so if you want more (hopefully shorter?) accounts of my AOC adventures in Rust, be sure to follow this blog, or [follow me on Twitter / X](https://twitter.com/jwrunge), where I'll do some occasional posts or blog updates.
 
 See ya!
