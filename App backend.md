@@ -30,3 +30,9 @@ To get the (frontend) app up and running, we are:
 Look, we're getting a lot of bang for our buck out of that process. In the "good old days" of the simple, static hypertext web, we wouldn't be deploying iOS and Android apps using the same codebase as our webapp. But you've got to admit, the setup and implementation, and indeed, the work required to maintain and synchronize dependencies and fine-tune build steps is a far cry from putting together a couple of text files and sticking them on a webserver. It's a far cry from writing native system code in languages like Rust or Zig or Go, where I'd argue it's pretty trivial to import a few dependencies, compile, and get a nice, portable binary. Building for the web is starting to feel a lot more like building C++ code -- keeping your CMake file up-to-date, constantly tweaking your build toolchain, futzing about with IDE integrations (which strangely work better than trying to just build off the command line?).
 
 Indeed, simply deciding to *use* a JavaScript framework feels a lot like committing to a C++ app framework like Qt. You do things the framework's way; you build how the framework tells you to buld; you pray your third-party integrations play well with the framework; you use the framework's types and data structures. And while using JS frameworks at least doesn't come with the sting of a $17,000 license (seriously), it *does* come with the sting that HTML, CSS, and JavaScript ***were already made to render designed content to the screen.***
+
+familiarity breeds contempt
+
+we hate what we're forced to use
+
+we love what's popular, until it's too popular
