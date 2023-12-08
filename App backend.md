@@ -22,3 +22,8 @@ htmx doesn't account for WebSocket servers. (Early on, we explored gRPC, and dec
 The web doesn't need to be simple, but the stuff that runs on user's browsers NEEDS to be simple. Or at least as simple as possible. (What about Mapbox or Canva or design software?)
 
 (note - multiple apps showing different lab statuses)
+
+To get the (frontend) app up and running, we are:
+
+* Using a Vite bundler to invoke the Svelte compiler, bundling up a set of chunked JavaScript files with all our HTML markup and TypeScript code into a SvelteKit app (interpreted as an SPA using adapter-static), preprocessing all our global SCSS into plain CSS, yanking all our in-component SCSS out and preprocessing that, then injecting it all back into the app. In all that code, we're implementing the Ionic UI framework (modifying quite a bit here and there) and Capacitor hybrid-app functionality. Then we're using Capacitor to put all that code into a WebView and prepare project files for iOS and Android native apps.
+
